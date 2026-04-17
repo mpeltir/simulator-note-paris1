@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S1 Simulator | Ultra Dark Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #080c14; /* Fallback ultra sombre */
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+            background: rgba(30, 41, 59, 0.6);
+        }
+        .progress-ring {
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .btn-action:active {
+            transform: scale(0.95);
+        }
+        .hachure-bg {
+            background: repeating-linear-gradient(45deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03) 10px, rgba(0,0,0,0.2) 10px, rgba(0,0,0,0.2) 20px);
+        }
+        
+        /* Animations */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up {
+            animation: fadeUp 0.4s ease-out forwards;
+        }
+        
+        /* Effet de lueur en fond */
+        .ambient-glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="min-h-screen relative">
+
+    <!-- Arrière-plan Chapelle de la Sorbonne -->
+    <!-- Opacité réduite et filtre gris/contraste pour rester dans l'ambiance Dark -->
+    <div class="fixed inset-0 w-full h-full z-[-3] bg-cover bg-center bg-no-repeat opacity-[0.08]" 
+         style="background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Chapelle_de_la_Sorbonne.jpg/1280px-Chapelle_de_la_Sorbonne.jpg'); filter: grayscale(100%) contrast(150%);">
+    </div>
+    
+    <!-- Dégradé pour fondre l'image vers le bas et garder le texte 100% lisible -->
+    <div class="fixed inset-0 w-full h-full z-[-2] bg-gradient-to-b from-[#080c14]/60 via-[#080c14]/90 to-[#080c14] pointer-events-none"></div>
+
+    <!-- Décoration de fond (lueurs) -->
+    <div class="ambient-glow top-0 left-0"></div>
+    <div class="ambient-glow bottom-0 right-0" style="background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, rgba(0,0,0,0) 70%);"></div>
+
+    <div class="max-w-6xl mx-auto px-4 py-10">
+        <!-- Header Section -->
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12 gap-8 relative z-10">
+            <div class="flex flex-col gap-5 w-full lg:w-auto">
+                <div>
+                    <div class="inline-block px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest mb-3">
+                        L2 Gestion • 2025/2026
+                    </div>
+                    <h1 class="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                        Paris 1 Panthéon-Sorbonne
+                    </h1>
+                    <p id="semester-title" class="text-slate-400 mt-2 font-medium">Simulateur de moyenne - Semestre 1</p>
+                </div>
+                
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Tabs -->
+                    <div class="flex bg-slate-800/60 p-1.5 rounded-xl border border-slate-700/50 backdrop-blur-md">
+                        <button id="tab-s1" class="px-5 py-2 rounded-lg text-sm font-bold transition-all bg-indigo-500 text-white shadow-lg shadow-indigo-500/25">Semestre 1</button>
+                        <button id="tab-s2" class="px-5 py-2 rounded-lg text-sm font-bold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-700/50">Semestre 2</button>
+                        <button id="tab-year" class="px-5 py-2 rounded-lg text-sm font-bold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-700/50">Bilan Année</button>
+                    </div>
+
+                    <div class="w-px h-8 bg-slate-700/50 hidden md:block mx-2"></div>
+
+                    <!-- Actions Buttons -->
+                    <button id="copy-btn" class="btn-action px-4 py-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-[11px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                        <span>Partager</span>
+                    </button>
+
+                    <button id="reset-btn" class="btn-action px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[11px] font-bold uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <span>Effacer</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Result Card -->
+            <div id="status-container" class="glass rounded-[2rem] p-6 flex items-center gap-6 shadow-2xl min-w-[340px] border-t-4 border-slate-600 transition-all duration-700 relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="relative flex items-center justify-center">
+                    <svg class="w-24 h-24 drop-shadow-xl">
+                        <circle class="text-slate-800" stroke-width="6" stroke="currentColor" fill="transparent" r="40" cx="48" cy="48"/>
+                        <circle id="progress-circle" class="text-indigo-500 progress-ring" stroke-width="6" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" stroke="currentColor" fill="transparent" r="40" cx="48" cy="48"/>
+                    </svg>
+                    <span id="global-average" class="absolute text-xl font-extrabold tracking-tight">0.000</span>
+                </div>
+                <div class="relative z-10">
+                    <p id="avg-label" class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Moyenne S1</p>
+                    <h2 id="validation-text" class="text-xl font-bold text-slate-200">En attente...</h2>
+                    <p id="points-summary" class="text-xs text-slate-500 mt-1.5 font-medium">Saisie en cours</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subjects Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10" id="subjects-grid">
+            <!-- Cards generated by JS -->
+        </div>
+
+        <!-- Footer Stats -->
+        <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 pb-12 relative z-10">
+            <div class="glass p-5 rounded-3xl text-center border border-slate-700/30">
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Total Coeff</p>
+                <p id="stat-coeff" class="text-2xl font-black text-slate-200">0</p>
+            </div>
+            <div class="glass p-5 rounded-3xl text-center border border-slate-700/30">
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Points Acquis</p>
+                <p id="stat-points" class="text-2xl font-black text-indigo-400">0.000</p>
+            </div>
+            <div class="glass p-5 rounded-3xl text-center border border-slate-700/30">
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Points Max</p>
+                <p id="stat-max" class="text-2xl font-black text-slate-400">0</p>
+            </div>
+            <div class="glass p-5 rounded-3xl text-center border border-slate-700/30">
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Statut</p>
+                <p id="stat-status" class="text-lg font-black text-slate-400 uppercase tracking-wide">Incomplet</p>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="text-center text-xs text-slate-600 font-medium pb-8 relative z-10">
+        Simulateur non officiel • Développé pour les étudiants de L2 Gestion - Fait avec ❤️ par Mathéo
+
+    <!-- Notification Message -->
+    <div id="toast" class="fixed bottom-8 right-8 glass px-6 py-4 rounded-2xl border-indigo-500/50 text-indigo-200 text-sm font-bold translate-y-32 opacity-0 transition-all duration-500 pointer-events-none z-50 flex items-center gap-3 shadow-2xl shadow-indigo-500/20">
+        <span id="toast-icon">✨</span>
+        <span id="toast-msg">Données sauvegardées automatiquement</span>
+    </div>
+
+    <script>
+        const semestersData = {
+            s1: {
+                id: 's1',
+                label: 'Moyenne S1',
+                title: 'Simulateur de moyenne - Semestre 1',
+                subjects: [
+                    { id: 'maths', name: 'Mathématiques', coeff: 5, hasTD: true },
+                    { id: 'im', name: 'IM', coeff: 5, hasTD: true },
+                    { id: 'info', name: 'Informatique', coeff: 5, hasTD: true },
+                    { id: 'anglais', name: 'Anglais', coeff: 2, hasTD: true },
+                    { id: 'option1', name: 'Option 1', coeff: 3, hasTD: false },
+                    { id: 'option2', name: 'Option 2', coeff: 3, hasTD: false },
+                    { id: 'option3', name: 'Option 3', coeff: 3, hasTD: false },
+                    { id: 'humanite', name: 'Humanité', coeff: 2, hasTD: false },
+                    { id: 'economie', name: 'Economie', coeff: 2, hasTD: false }
+                ]
+            },
+            s2: {
+                id: 's2',
+                label: 'Moyenne S2',
+                title: 'Simulateur de moyenne - Semestre 2',
+                subjects: [
+                    { id: 'stat', name: 'Statistiques', coeff: 5, hasTD: true },
+                    { id: 'droit', name: 'Droit', coeff: 5, hasTD: true },
+                    { id: 'compta', name: 'Comptabilité', coeff: 5, hasTD: true },
+                    { id: 'marche_fi', name: 'Marchés fi', coeff: 5, hasTD: true },
+                    { id: 'rationalite', name: 'Rationalité et orga.', coeff: 3, hasTD: false },
+                    { id: 'challenge', name: 'Challenge', coeff: 3, hasTD: false },
+                    { id: 'anglais_s2', name: 'Anglais', coeff: 2, hasTD: true },
+                    { id: 'option_s2', name: 'Option (Hum/Enjeux)', coeff: 2, hasTD: false }
+                ]
+            }
+        };
+
+        // Rétablissement de l'ancienne clé de stockage pour ne pas perdre les données
+        const STORAGE_KEY = 'student_grades_l2_gestion_v1';
+        let currentSem = 's1';
+
+        const activeTabClass = "px-5 py-2 rounded-lg text-sm font-bold transition-all bg-indigo-500 text-white shadow-lg shadow-indigo-500/25";
+        const inactiveTabClass = "px-5 py-2 rounded-lg text-sm font-bold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-700/50";
+
+        function init() {
+            document.getElementById('tab-s1').addEventListener('click', () => switchTab('s1'));
+            document.getElementById('tab-s2').addEventListener('click', () => switchTab('s2'));
+            document.getElementById('tab-year').addEventListener('click', () => switchTab('year'));
+            document.getElementById('reset-btn').addEventListener('click', resetAll);
+            document.getElementById('copy-btn').addEventListener('click', copyToClipboard);
+            
+            switchTab('s1');
+        }
+
+        function switchTab(semId) {
+            currentSem = semId;
+            
+            document.getElementById('tab-s1').className = semId === 's1' ? activeTabClass : inactiveTabClass;
+            document.getElementById('tab-s2').className = semId === 's2' ? activeTabClass : inactiveTabClass;
+            document.getElementById('tab-year').className = semId === 'year' ? activeTabClass : inactiveTabClass;
+            
+            if (semId === 'year') {
+                document.getElementById('semester-title').innerText = "Bilan global de l'année scolaire";
+                document.getElementById('avg-label').innerText = "Moyenne Annuelle";
+                renderYearGrid();
+            } else {
+                document.getElementById('semester-title').innerText = semestersData[semId].title;
+                document.getElementById('avg-label').innerText = semestersData[semId].label;
+                renderGrid();
+            }
+        }
+
+        function getSemesterStatsFromStorage(semId) {
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            let totalWeightedPoints = 0;
+            let totalCoeffs = 0;
+
+            semestersData[semId].subjects.forEach(subject => {
+                // Rétrocompatibilité : Les données de l'onglet S1 ont été sauvegardées 
+                // sous la forme "nomdematiere_type" sans le préfixe "s1_".
+                // Pour le S2, on utilise le nouveau format "s2_nomdematiere_type"
+                const prefix = semId === 's1' ? '' : `${semId}_`;
+                const tdKey = `${prefix}${subject.id}_td`;
+                const ptKey = `${prefix}${subject.id}_partiel`;
+                
+                const tdStr = data[tdKey];
+                const ptStr = data[ptKey];
+                
+                const td = tdStr ? parseFloat(tdStr) : 0;
+                const pt = ptStr ? parseFloat(ptStr) : 0;
+                
+                const avg = subject.hasTD ? (td + pt) / 2 : pt;
+                
+                totalWeightedPoints += avg * subject.coeff;
+                totalCoeffs += subject.coeff;
+            });
+
+            return {
+                points: totalWeightedPoints,
+                coeffs: totalCoeffs,
+                avg: totalCoeffs > 0 ? totalWeightedPoints / totalCoeffs : 0
+            };
+        }
+
+        function renderYearGrid() {
+            const grid = document.getElementById('subjects-grid');
+            grid.innerHTML = '';
+            
+            const s1Stats = getSemesterStatsFromStorage('s1');
+            const s2Stats = getSemesterStatsFromStorage('s2');
+
+            const totalPoints = s1Stats.points + s2Stats.points;
+            const totalCoeffs = s1Stats.coeffs + s2Stats.coeffs;
+            const yearAvg = totalCoeffs > 0 ? totalPoints / totalCoeffs : 0;
+
+            refreshTopUI(yearAvg, totalPoints, totalCoeffs);
+
+            const createSemCard = (title, stats, isS1, delayIndex) => {
+                let statusText = stats.avg >= 10 ? "Validé" : (stats.avg > 0 ? "Non Validé" : "En attente");
+                let statusColor = stats.avg >= 10 ? "text-emerald-400" : (stats.avg > 0 ? "text-rose-400" : "text-slate-500");
+                let borderClass = stats.avg >= 10 ? 'border-emerald-500' : (stats.avg > 0 ? 'border-rose-500' : 'border-slate-700');
+                let progressPercent = Math.min((stats.avg / 20) * 100, 100);
+                
+                return `
+                <div class="glass glass-card p-8 rounded-[2rem] transition-all duration-300 border-t-4 ${borderClass} animate-fade-up relative overflow-hidden group" style="animation-delay: ${delayIndex * 0.1}s">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-slate-800/50 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
+                    <div class="flex justify-between items-center mb-8 relative z-10">
+                        <h3 class="text-2xl font-extrabold text-slate-100 tracking-tight">${title}</h3>
+                        <span class="px-4 py-1.5 rounded-full bg-slate-900/80 text-[10px] font-black uppercase tracking-widest ${statusColor} shadow-inner">${statusText}</span>
+                    </div>
+                    
+                    <div class="flex flex-col gap-2 text-center mb-8 relative z-10">
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Moyenne</p>
+                        <div class="text-5xl font-black ${statusColor} tracking-tighter drop-shadow-md">${stats.avg > 0 ? stats.avg.toFixed(3) : '--'}</div>
+                        <p class="text-sm text-slate-400 mt-2 font-medium">Points: <span class="text-slate-300 font-bold">${stats.points.toFixed(2)}</span> <span class="text-slate-600">/ ${stats.coeffs * 20}</span></p>
+                    </div>
+
+                    <!-- Mini Progress Bar -->
+                    <div class="w-full bg-slate-900/80 rounded-full h-2 mb-8 border border-slate-700/50 overflow-hidden relative z-10">
+                        <div class="h-full rounded-full transition-all duration-1000 ${stats.avg >= 10 ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' : (stats.avg > 0 ? 'bg-gradient-to-r from-rose-600 to-rose-400' : 'bg-slate-700')}" style="width: ${stats.avg > 0 ? progressPercent : 0}%"></div>
+                    </div>
+
+                    <button onclick="switchTab('${isS1 ? 's1' : 's2'}')" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 text-sm font-bold transition-colors border border-slate-700 hover:border-indigo-500/30 relative z-10 flex justify-center items-center gap-2">
+                        <span>Voir le détail</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>`;
+            };
+
+            grid.innerHTML = createSemCard("Semestre 1", s1Stats, true, 0) + createSemCard("Semestre 2", s2Stats, false, 1);
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('subjects-grid');
+            grid.innerHTML = ''; 
+            
+            const subjects = semestersData[currentSem].subjects;
+            
+            subjects.forEach((subject, index) => {
+                const card = document.createElement('div');
+                card.className = `glass glass-card p-6 rounded-3xl transition-all duration-300 animate-fade-up relative overflow-hidden`;
+                card.style.animationDelay = `${index * 0.05}s`;
+                
+                // Rétrocompatibilité pour la structure des données du S1
+                const prefix = currentSem === 's1' ? '' : `${currentSem}_`;
+
+                let inputsHTML = subject.hasTD 
+                    ? `<div class="flex gap-3 mt-5 relative z-10">
+                        <div class="flex-1">
+                            <label class="text-[9px] text-slate-500 font-bold uppercase tracking-wider ml-1 block mb-1">Note TD</label>
+                            <input type="number" step="0.01" min="0" max="20" placeholder="0.00" 
+                                class="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all score-input font-medium placeholder-slate-600"
+                                data-key="${prefix}${subject.id}_td" data-subject="${subject.id}" data-type="td">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[9px] text-slate-500 font-bold uppercase tracking-wider ml-1 block mb-1">Partiel</label>
+                            <input type="number" step="0.01" min="0" max="20" placeholder="0.00" 
+                                class="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all score-input font-medium placeholder-slate-600"
+                                data-key="${prefix}${subject.id}_partiel" data-subject="${subject.id}" data-type="partiel">
+                        </div>
+                       </div>`
+                    : `<div class="mt-5 relative z-10">
+                        <label class="text-[9px] text-slate-500 font-bold uppercase tracking-wider ml-1 block mb-1">Partiel Unique</label>
+                        <input type="number" step="0.01" min="0" max="20" placeholder="0.00" 
+                            class="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all score-input font-medium placeholder-slate-600 hachure-bg"
+                            data-key="${prefix}${subject.id}_partiel" data-subject="${subject.id}" data-type="partiel">
+                       </div>`;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3 relative z-10">
+                        <div>
+                            <h3 class="font-bold text-slate-100 text-lg group-hover:text-indigo-400 transition-colors tracking-tight">${subject.name}</h3>
+                            <p class="text-[11px] text-slate-500 font-semibold mt-0.5">Coefficient ${subject.coeff}</p>
+                        </div>
+                        <div id="badge-${subject.id}" class="h-8 min-w-[55px] px-2 rounded-lg bg-slate-900/80 flex items-center justify-center text-[11px] font-black text-slate-400 border border-slate-700 shadow-inner">
+                            --
+                        </div>
+                    </div>
+                    <!-- Jauge Matière -->
+                    <div class="w-full bg-slate-900/60 rounded-full h-1.5 mt-3 border border-slate-700/30 overflow-hidden relative z-10">
+                        <div id="bar-${subject.id}" class="h-full rounded-full transition-all duration-700 w-0 bg-slate-600"></div>
+                    </div>
+                    ${inputsHTML}
+                `;
+                grid.appendChild(card);
+            });
+
+            document.querySelectorAll('.score-input').forEach(input => {
+                input.addEventListener('input', () => {
+                    updateCalculations();
+                    saveToStorage();
+                });
+            });
+
+            loadFromStorage();
+        }
+
+        function updateCalculations() {
+            if (currentSem === 'year') return;
+
+            let totalWeightedPoints = 0;
+            let totalCoeffs = 0;
+            const subjects = semestersData[currentSem].subjects;
+            const prefix = currentSem === 's1' ? '' : `${currentSem}_`;
+
+            subjects.forEach(subject => {
+                const tdIn = document.querySelector(`[data-key="${prefix}${subject.id}_td"]`);
+                const ptIn = document.querySelector(`[data-key="${prefix}${subject.id}_partiel"]`);
+                
+                const td = tdIn && tdIn.value !== "" ? parseFloat(tdIn.value) : 0;
+                const pt = ptIn && ptIn.value !== "" ? parseFloat(ptIn.value) : 0;
+                
+                const avg = subject.hasTD ? (td + pt) / 2 : pt;
+                
+                const badge = document.getElementById(`badge-${subject.id}`);
+                const bar = document.getElementById(`bar-${subject.id}`);
+                
+                const hasInput = (subject.hasTD && (tdIn?.value !== "" || ptIn?.value !== "")) || (!subject.hasTD && ptIn?.value !== "");
+
+                if (hasInput) {
+                    badge.innerText = avg.toFixed(2);
+                    let colorClass = avg >= 10 ? 'emerald' : 'rose';
+                    
+                    badge.className = `h-8 min-w-[55px] px-2 rounded-lg bg-${colorClass}-500/10 flex items-center justify-center text-[11px] font-black text-${colorClass}-400 border border-${colorClass}-500/30 shadow-inner`;
+                    
+                    if(bar) {
+                        bar.style.width = `${Math.min((avg / 20) * 100, 100)}%`;
+                        bar.className = `h-full rounded-full transition-all duration-700 bg-gradient-to-r from-${colorClass}-600 to-${colorClass}-400`;
+                    }
+                } else {
+                    badge.innerText = "--";
+                    badge.className = "h-8 min-w-[55px] px-2 rounded-lg bg-slate-900/80 flex items-center justify-center text-[11px] font-black text-slate-500 border border-slate-700 shadow-inner";
+                    if(bar) {
+                        bar.style.width = '0%';
+                        bar.className = 'h-full rounded-full transition-all duration-700 bg-slate-600';
+                    }
+                }
+
+                totalWeightedPoints += avg * subject.coeff;
+                totalCoeffs += subject.coeff;
+            });
+
+            const finalAvg = totalCoeffs > 0 ? totalWeightedPoints / totalCoeffs : 0;
+            refreshTopUI(finalAvg, totalWeightedPoints, totalCoeffs);
+        }
+
+        function refreshTopUI(avg, points, coeffs) {
+            const avgDisplay = document.getElementById('global-average');
+            const circle = document.getElementById('progress-circle');
+            const statusContainer = document.getElementById('status-container');
+            const validationText = document.getElementById('validation-text');
+            const summaryText = document.getElementById('points-summary');
+
+            const titleSuccess = currentSem === 'year' ? "Année Validée !" : "Semestre Validé !";
+            const titleFail = currentSem === 'year' ? "Année Non Validée" : "Non Validé";
+            const titlePending = currentSem === 'year' ? "Saisie en cours..." : "Saisie en cours...";
+
+            avgDisplay.innerText = avg.toFixed(3);
+            
+            const offset = 251.2 - (avg / 20) * 251.2;
+            circle.style.strokeDashoffset = offset;
+
+            document.getElementById('stat-coeff').innerText = coeffs;
+            document.getElementById('stat-points').innerText = points.toFixed(3);
+            document.getElementById('stat-max').innerText = coeffs * 20;
+
+            const pointsNeededForTen = (coeffs * 10) - points;
+
+            if (avg >= 10) {
+                validationText.innerText = titleSuccess;
+                validationText.className = "text-2xl font-black text-emerald-400 tracking-tight";
+                statusContainer.className = "glass rounded-[2rem] p-6 flex items-center gap-6 shadow-2xl min-w-[340px] border-t-4 border-emerald-500 transition-all duration-700 relative overflow-hidden group";
+                circle.classList.add('text-emerald-500');
+                circle.classList.remove('text-indigo-500', 'text-rose-500');
+                document.getElementById('stat-status').innerText = "ADMIS";
+                document.getElementById('stat-status').className = "text-lg font-black text-emerald-400 uppercase tracking-wide";
+                summaryText.innerText = currentSem === 'year' ? "Félicitations, vous passez !" : "Félicitations !";
+            } else if (points > 0) {
+                validationText.innerText = titleFail;
+                validationText.className = "text-2xl font-black text-rose-400 tracking-tight";
+                statusContainer.className = "glass rounded-[2rem] p-6 flex items-center gap-6 shadow-2xl min-w-[340px] border-t-4 border-rose-500 transition-all duration-700 relative overflow-hidden group";
+                circle.classList.add('text-rose-500');
+                circle.classList.remove('text-indigo-500', 'text-emerald-500');
+                document.getElementById('stat-status').innerText = "AJOURNÉ";
+                document.getElementById('stat-status').className = "text-lg font-black text-rose-400 uppercase tracking-wide";
+                
+                // Nouveau texte : Calcul exact des points manquants
+                if (pointsNeededForTen > 0) {
+                    summaryText.innerHTML = `Il manque <strong class="text-rose-300">${pointsNeededForTen.toFixed(2)} pts</strong> pour valider.`;
+                } else {
+                    summaryText.innerText = "Saisie incomplète.";
+                }
+
+            } else {
+                validationText.innerText = "En attente...";
+                validationText.className = "text-xl font-bold text-slate-200 tracking-tight";
+                statusContainer.className = "glass rounded-[2rem] p-6 flex items-center gap-6 shadow-2xl min-w-[340px] border-t-4 border-slate-600 transition-all duration-700 relative overflow-hidden group";
+                circle.classList.add('text-indigo-500');
+                circle.classList.remove('text-emerald-500', 'text-rose-500');
+                document.getElementById('stat-status').innerText = "INCOMPLET";
+                document.getElementById('stat-status').className = "text-lg font-black text-slate-500 uppercase tracking-wide";
+                summaryText.innerText = titlePending;
+            }
+        }
+
+        function saveToStorage() {
+            const existingData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            document.querySelectorAll('.score-input').forEach(input => {
+                // Utilisation de dataset.key qui gère la rétrocompatibilité
+                const key = input.dataset.key;
+                existingData[key] = input.value;
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(existingData));
+            showToast("✨", "Données sauvegardées");
+        }
+
+        function loadFromStorage() {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                document.querySelectorAll('.score-input').forEach(input => {
+                     // Utilisation de dataset.key qui gère la rétrocompatibilité
+                    const key = input.dataset.key;
+                    if (data[key] !== undefined) {
+                        input.value = data[key];
+                    }
+                });
+            }
+            if (currentSem === 'year') {
+                renderYearGrid();
+            } else {
+                updateCalculations();
+            }
+        }
+
+        function copyToClipboard() {
+            const avgDisplay = document.getElementById('global-average').innerText;
+            const statusDisplay = document.getElementById('stat-status').innerText;
+            const contextText = currentSem === 'year' ? "Année L2" : (currentSem === 's1' ? "Semestre 1" : "Semestre 2");
+            
+            const shareText = `🎓 Bilan ${contextText} : ${avgDisplay}/20 (${statusDisplay}) - Paris 1 L2 Gestion`;
+            
+            navigator.clipboard.writeText(shareText).then(() => {
+                showToast("📋", "Bilan copié dans le presse-papier !");
+            }).catch(err => {
+                showToast("❌", "Erreur lors de la copie");
+            });
+        }
+
+        function resetAll() {
+            if (currentSem === 'year') {
+                if (confirm("Effacer absolument TOUTES les données de l'année entière ? Cette action est irréversible.")) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    renderYearGrid();
+                    showToast("🗑️", "Toutes les données ont été effacées");
+                }
+            } else {
+                if (confirm(`Effacer toutes les données du ${semestersData[currentSem].title} ?`)) {
+                    const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+                    
+                    Object.keys(savedData).forEach(key => {
+                        // Logique de suppression adaptée à la rétrocompatibilité
+                        if (currentSem === 's1') {
+                            // On efface tout ce qui ne commence PAS par "s2_"
+                            if (!key.startsWith('s2_')) {
+                                delete savedData[key];
+                            }
+                        } else {
+                            // On efface uniquement ce qui commence par "s2_"
+                            if (key.startsWith('s2_')) {
+                                delete savedData[key];
+                            }
+                        }
+                    });
+                    
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData));
+                    document.querySelectorAll('.score-input').forEach(input => input.value = "");
+                    updateCalculations();
+                    showToast("🗑️", "Données du semestre effacées");
+                }
+            }
+        }
+
+        let toastTimer;
+        function showToast(icon = "✨", message = "Données sauvegardées automatiquement") {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = message;
+            
+            clearTimeout(toastTimer);
+            toast.style.opacity = "1";
+            toast.style.transform = "translateY(0)";
+            
+            toastTimer = setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateY(32px)";
+            }, 3000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
